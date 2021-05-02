@@ -29,6 +29,14 @@ public:
         }
     };
 
+    DArray(const DArray &array) :_bufferSize(array._bufferSize), _nextIndex(array._nextIndex), _buffer(new T[_bufferSize]) {
+        for (int i = 0; i < array._nextIndex; ++i) {
+            _buffer[i] = array._buffer[i];
+        }
+    }
+
+    DArray &operator=(const DArray &array) = delete;
+
     T &operator[](size_t index) {
         assert(index <= _nextIndex && "Wrong index");
         return _buffer[index];
@@ -168,7 +176,9 @@ struct ElementWithIndex {
 
 template<class T>
 struct IsLessElementWithIndex {
-    bool operator()(ElementWithIndex<T> *l, ElementWithIndex<T> *r) { return l->val < r->val; }
+    bool operator()(ElementWithIndex<T> *l, ElementWithIndex<T> *r) {
+        return l->val < r->val;
+    }
 };
 
 template<class T, class C = IsLessElementWithIndex<T>>
@@ -201,8 +211,8 @@ public:
     }
 
     void changeElement(ElementWithIndex<T> *oldElement, ElementWithIndex<T> *newElement) {
-        _arr[oldElement->index] = newElement;
         newElement->index = oldElement->index;
+        _arr[oldElement->index] = newElement;
         _isLess(oldElement, newElement) ? siftUp(newElement->index) : siftDown(newElement->index);
     }
 
@@ -265,8 +275,8 @@ public:
 
     T moveWindow() {
         assert(_windowPosition + _windowSize <= _arraySize);
-        auto newElement = &_array[_windowPosition + _windowSize];
-        auto removeElement = &_array[_windowPosition];
+        auto newElement = _array + _windowPosition + _windowSize;
+        auto removeElement = _array + _windowPosition;
         _heap.changeElement(removeElement, newElement);
         _windowPosition++;
         return getCurrentMaximum();
@@ -280,82 +290,6 @@ private:
     size_t _windowPosition;
     HeapWithIndexes<T, C> _heap;
 };
-
-
-//template<class T>
-//struct IsEqualDefault {
-//    bool operator()(T &l, T &r) { return l == r; }
-//};
-
-//template<class T, class C = IsLessDefault<T>, class E = IsEqualDefault<T>>
-//class SuperHeap : public Heap<T, C> {
-//public:
-//
-//    SuperHeap() : Heap<T, C>(), _isEqual(E()) {}
-//
-//    explicit SuperHeap(const DArray<T> &arr, C isLess = C(), E isEqual = E()) : Heap<T, C>(arr, isLess), _isEqual(
-//        isEqual) { Heap<T, C>::buildHead(); }
-//
-//    int search(T element) {
-//        int index = 0;
-////        if (_arr.getSize() <= 1) {
-////            index = (_arr.getSize() == 1 && _isEqual(_arr[0], element)) ? 0 : -1;
-////        }
-//        debug(element);
-//        while (index >= 0) {
-//            std::cout << "\tindex: [ " << index << " ]" << std::endl;
-//            if (_isEqual(_arr[index], element)) {
-//                break;
-//            } else if (_isLess(_arr[index], element) || ((2 * index + 1) >= _arr.getSize())) {
-//                index = getClosestLeftParent(index);
-//                index = (index == 0) ? -1 : index + 1;  // go to neighbor or element not found
-//            } else {
-//                index = 2 * index + 1;
-//            }
-//        }
-//        std::cout << "Index is [ " << index << " ] " << std::endl;
-//        return index;
-//    }
-//
-//    bool changeElement(T oldElement, T newElement) {
-//        int index = search(oldElement);
-//        if (index == -1) {
-//            std::cout << "Element [ " << oldElement << " ] not found. Heap array: [ ";
-//            for (int i = 0; i < _arr.getSize(); ++i) {
-//                std::cout << _arr[i] << " ";
-//            }
-//            std::cout << "]" << std::endl;
-//            return false;
-//        }
-//        _arr[index] = newElement;
-//        _isLess(oldElement, newElement) ? siftUp(index) : siftDown(index);
-//        return true;
-//    }
-//
-//private:
-//
-//    void debug(T element) {
-//        std::cout << "Search [ " << element << " ] . Heap array: [ ";
-//        for (int i = 0; i < _arr.getSize(); ++i) {
-//            std::cout << _arr[i] << " ";
-//        }
-//        std::cout << "]" << std::endl;
-//    }
-//
-//    int getClosestLeftParent(int index) {
-//        while (index > 0 && (index % 2 == 0 || index == (_arr.getSize() - 1))) {
-//            index = (index - 1) / 2;
-//        }
-//        return index;
-//    }
-//
-//    using Heap<T, C>::_arr;
-//    using Heap<T, C>::_isLess;
-//    using Heap<T, C>::siftUp;
-//    using Heap<T, C>::siftDown;
-//
-//    E _isEqual;
-//};
 
 void testDArrray() {
     {
@@ -417,60 +351,6 @@ void testHeap() {
     }
 }
 
-//void testSuperHeap() {
-//    {
-//        DArray<int> arr;
-//        for (int i = 0; i < 15; ++i) {
-//            arr.pushBack(i);
-//        }
-//        SuperHeap<int> heap(arr);
-//        heap.insert(14);
-//        assert(heap.extractTop() == 14);
-//        assert(heap.getTop() == 14);
-//        assert(heap.search(14) == 0);
-//        for (int j = 14; j >= 0; --j) {
-//            assert(heap.extractTop() == j);
-//        }
-//    }
-//    {
-//        SuperHeap<int> heap;
-//        for (int i = 0; i < 5; ++i) {
-//            heap.insert(i);
-//        }
-//        assert(heap.extractTop() == 4);
-//        heap.insert(10);
-//        heap.insert(100);
-//        assert(heap.extractTop() == 100);
-//        for (int j = 0; j < 10; ++j) {
-//            heap.insert(j);
-//        }
-//        assert(heap.search(777) == -1);
-//        assert(heap.search(5) != -1);
-//    }
-//    {
-//        SuperHeap<int> heap;
-//        for (int i = 0; i < 15; ++i) {
-//            heap.insert(i);
-//        }
-//        assert(heap.changeElement(0, 100));
-//        assert(heap.getTop() == 100);
-//        assert(heap.search(0) == -1);
-//        assert(heap.search(5) == 12);
-//    }
-//    {
-//        DArray<int> array;
-//        array.pushBack(8);
-//        array.pushBack(5);
-//        array.pushBack(3);
-//        array.pushBack(4);
-//        SuperHeap<int> heap(array);
-//        auto index = heap.search(3);
-//        std::cout << index << std::endl;
-//        assert(index == 2);
-//    }
-//}
-
-
 void testElementWithIndexHeap() {
     DArray<ElementWithIndex<int> *> dArray;
     auto arr = new ElementWithIndex<int>[15];
@@ -520,16 +400,16 @@ void testCaseSlidingWindow(std::istream &in, std::ostream &out) {
     auto arr = new ElementWithIndex<int>[arrSize];
     for (int i = 0; i < arrSize; ++i) {
         in >> arr[i].val;
-        std::cout << "val: " << arr[i].val << std::endl;
         arr[i].index = i;
     }
     size_t windowSize = 0;
     in >> windowSize;
 
     SlidingWindow<int> slidingWindow(arr, arrSize, windowSize);
-    for (int j = 0; j <= arrSize - windowSize; ++j) {
-        out << slidingWindow.getCurrentMaximum() << " ";
+    out << slidingWindow.getCurrentMaximum() << " ";
+    for (int j = 0; j < arrSize - windowSize; ++j) {
         slidingWindow.moveWindow();
+        out << slidingWindow.getCurrentMaximum() << " ";
     }
     delete[] arr;
 }
@@ -567,12 +447,5 @@ void testSlidingWindowIO() {
 
 
 int main() {
-    testDArrray();
-    testHeap();
-    testElementWithIndexHeap();
     testSlidingWindow();
-    std::cout << "kek";
-    // AAAA Тут все куда проще, надобыло сделать обертку над int ввиде структуры Int + size_t, в первом - храним само значение, во втором - индекс в
-    // куче, который обновляем когда двигаем элементы. Т.е. чтобы заменить уходящий элемент на прешедший не придется искать уходящий в куче - мы
-    // возъмем его из оригинального массива, узнаем индекс в куче с помощью нашего хака и сделаем то что делаем сейчас....
 }

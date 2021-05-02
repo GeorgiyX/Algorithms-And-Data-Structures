@@ -4,17 +4,17 @@ project(Module1)
 set(CMAKE_CXX_STANDARD 14)
 
 add_executable(Task-3_1_queue
-        src/queue.cpp)
+        src/HW/queue.cpp)
 
 add_executable(Task-1_2_square
-        src/square.cpp)
+        src/HW/square.cpp)
 
 add_executable(Task-2_3_intersection
-        src/intersection.cpp)
+        src/HW/intersection.cpp)
 
 add_executable(Task-6_4_k-stat-rand
-        src/k-stat-rand.cpp)
+        src/HW/k-stat-rand.cpp)
 
 add_executable(Task-4_4_rolling-maximum
-        src/rolling-maximum.cpp)
+        src/HW/rolling-maximum.cpp)
 
