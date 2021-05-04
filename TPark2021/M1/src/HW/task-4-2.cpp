@@ -42,13 +42,16 @@ class Vector {
         auto oldBuf = _buf;
         _bufSize = _bufSize * RESIZE_MULTIPLIER;
         _buf = new T[_bufSize];
-        std::memcpy(_buf, oldBuf, size() * sizeof(T));
+        for (int i = 0; i < _nextPushIndex; ++i) {
+            _buf[i] = oldBuf[i];
+        }
         delete[] oldBuf;
     };
 
 public:
-    Vector(size_t size, T defaultValue) : _nextPushIndex(size), _bufSize(size), _buf(new T[_bufSize]) {
-        for (size_t i = 0; i < _bufSize; ++i) {
+    Vector(size_t size, T defaultValue) : _nextPushIndex(size), _bufSize(size ? size : DEFAULT_SIZE),
+                                          _buf(new T[_bufSize]) {
+        for (size_t i = 0; i < size; ++i) {
             _buf[i] = defaultValue;
         }
     };
