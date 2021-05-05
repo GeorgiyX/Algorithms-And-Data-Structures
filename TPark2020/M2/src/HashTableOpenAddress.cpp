@@ -220,7 +220,7 @@ void testCase(std::istream &in, std::ostream &out) {
     }
 }
 
-void testHashMap() {
+void testHashSet() {
     {
         std::stringstream in, out;
         in << "+ hello\n? hello\n- hello\n? hello\n+ hello\n+ hello\n";
@@ -245,7 +245,7 @@ void testHashMap() {
     }
 };
 
-void testHashMapIO() {
+void testIO() {
     testCase(std::cin, std::cout);
 };
 
