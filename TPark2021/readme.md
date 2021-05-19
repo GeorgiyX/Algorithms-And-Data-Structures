@@ -8,3 +8,4 @@
 ## Модуль №2
 Задание на модуль - [ссылка]()
 Задача 1_1 - [отчет](https://contest.yandex.ru/contest/26886/run-report/51305716/)
+Задача 2_2 - [отчет](https://contest.yandex.ru/contest/26886/run-report/51542002/)
