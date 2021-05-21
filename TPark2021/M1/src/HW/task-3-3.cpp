@@ -18,11 +18,10 @@ class Vector {
     size_t _bufSize;
     T *_buf;
     void resize() {
-        std::cout << "resize!" << std::endl;
         auto oldBuf = _buf;
         _bufSize = _bufSize * RESIZE_MULTIPLIER;
         _buf = new T[_bufSize];
-        for (int i = 0; i < _nextPushIndex; ++i) {
+        for (size_t i = 0; i < _nextPushIndex; ++i) {
             _buf[i] = oldBuf[i];
         }
         delete[] oldBuf;

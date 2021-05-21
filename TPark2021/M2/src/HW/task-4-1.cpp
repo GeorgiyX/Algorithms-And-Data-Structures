@@ -3,6 +3,32 @@
 #include <cassert>
 #include <random>
 #include <algorithm>
+#include <stack>
+
+/**
+ * В одной военной части решили построить в одну шеренгу по росту. Т.к. часть была далеко не образцовая,
+ * то солдаты часто приходили не вовремя, а то их и вовсе приходилось выгонять из шеренги за плохо
+ * начищенные сапоги. Однако солдаты в процессе прихода и ухода должны были всегда быть выстроены по
+ * росту – сначала самые высокие, а в конце – самые низкие. За расстановку солдат отвечал прапорщик,
+ * который заметил интересную особенность – все солдаты в части разного роста.
+ *
+ * Ваша задача состоит в том, чтобы помочь прапорщику правильно расставлять солдат, а именно для каждого
+ * приходящего солдата указывать, перед каким солдатом в строе он должен становится.
+ * Требуемая скорость выполнения команды - O(log n).
+ *
+ * Формат входных данных:
+ * Первая строка содержит число N – количество команд (1 ≤ N ≤ 90 000). В каждой следующей строке
+ * содержится описание команды: число 1 и X если солдат приходит в строй (X – рост солдата,
+ * натуральное число до 100 000 включительно) и число 2 и Y если солдата, стоящим в строе на месте Y надо
+ * удалить из строя. Солдаты в строе нумеруются с нуля.
+ *
+ * Формат вывода:
+ * На каждую команду 1 (добавление в строй) вы должны выводить число K – номер позиции, на которую должен
+ * встать этот солдат (все стоящие за ним двигаются назад).
+ */
+
+const size_t RANDOM_SEED = 777;
+const size_t TEST_DATA_SIZE = 1000;
 
 template<class T>
 struct Compare {
@@ -21,6 +47,7 @@ struct Compare {
 
 template<class K, class D, class C = Compare<K>>
 class AVLTree {
+protected:
     struct Node {
         K key;
         D data;
@@ -68,12 +95,16 @@ public:
 
     bool isEmpty();
 
+    void traverseInOrder(const std::function<void(const K &)> &callback);
+
 protected:
     Node *findAUX(const K &key, Node *node);
 
     Node *insertAUX(const K &key, const D &data, Node *node);
 
     Node *eraseAUX(const K &key, Node *node);
+
+    Node *deleteAUX(Node *node);
 
     Node *balance(Node *node);
 
@@ -165,20 +196,7 @@ typename AVLTree<K, D, C>::Node *AVLTree<K, D, C>::eraseAUX(const K &key, AVLTre
             node->left = eraseAUX(key, node->left);
             break;
         case C::EQUAL: {
-            _itemCount--;
-            auto left = node->left;
-            auto right = node->right;
-            node->left = nullptr;
-            node->right = nullptr;
-            delete node;
-
-            if (!right) { return left; }
-            Node *minNode = nullptr;
-            auto treeWithoutMinNode = findAndRemoveMin(right, &minNode);
-            minNode->right = treeWithoutMinNode;
-            minNode->left = left;
-            node = minNode;
-            break;
+            return deleteAUX(node);
         }
         case C::MORE:
             node->right = eraseAUX(key, node->right);
@@ -210,8 +228,8 @@ char AVLTree<K, D, C>::height(AVLTree::Node *node) {
 
 template<class K, class D, class C>
 void AVLTree<K, D, C>::fixHeight(AVLTree::Node *node) {
-    if (node) { return; }
-    node->height = std::max(node->left->height, node->right->height) + 1;
+    if (!node) { return; }
+    node->height = std::max(node->left ? node->left->height : 0, node->right ? node->right->height : 0) + 1;
 }
 
 template<class K, class D, class C>
@@ -264,62 +282,257 @@ typename AVLTree<K, D, C>::Node *AVLTree<K, D, C>::rotateRight(AVLTree::Node *no
 
 template<class K, class D, class C>
 void AVLTree<K, D, C>::fixElementCount(AVLTree::Node *node) {
-    if (node) { return; }
-    node->height = std::max(node->left->elementCount, node->right->elementCount) + 1;
+    if (!node) { return; }
+    node->elementCount = ((node->left ? node->left->elementCount : 0)
+                       + (node->right ? node->right->elementCount : 0) + 1);
+}
+
+template<class K, class D, class C>
+void AVLTree<K, D, C>::traverseInOrder(const std::function<void(const K &)> &callback) {
+    if (!_root) { return; }
+    std::stack<Node *> stack;
+    stack.push(_root);
+    auto current = _root;
+    while (current->left) {
+        current = current->left;
+        stack.push(current);
+    }
+    while (!stack.empty()) {
+        current = stack.top();
+        callback(current->key);
+        stack.pop();
+
+        if (!current->right) { continue; }
+        current = current->right;
+        stack.push(current);
+        while (current->left) {
+            current = current->left;
+            stack.push(current);
+        }
+    }
+}
+
+template<class K, class D, class C>
+typename AVLTree<K, D, C>::Node *AVLTree<K, D, C>::deleteAUX(Node *node) {
+    _itemCount--;
+    auto left = node->left;
+    auto right = node->right;
+    node->left = nullptr;
+    node->right = nullptr;
+    delete node;
+
+    if (!right) { return left; }
+    Node *minNode = nullptr;
+    auto treeWithoutMinNode = findAndRemoveMin(right, &minNode);
+    minNode->right = treeWithoutMinNode;
+    minNode->left = left;
+    return balance(minNode);
 }
 
 
 template<class K, class D, class C = Compare<K>>
 class SolderAVLTree : public AVLTree<K, D, C> {
 public:
-    SolderAVLTree();
+    using typename AVLTree<K, D, C>::Node;
 
-    void eraseOnPosition(size_t pos);
+    explicit SolderAVLTree(const C &compare = C());
 
-    size_t insert(const K &key);
+    void eraseAtPosition(size_t position);
+
+    size_t insertAndGetPos(const K &key, const D &data);
 
 private:
+    Node *insertWithPositionAUX(const K &key, const D &data, Node *node, size_t &position);
+    Node *eraseAtPositionAUX(Node *node, size_t reminder);
+
+    size_t elementCountWithoutRightTree(Node *node);
+
     using AVLTree<K, D, C>::eraseAUX;
     using AVLTree<K, D, C>::insertAUX;
+    using AVLTree<K, D, C>::balance;
+    using AVLTree<K, D, C>::deleteAUX;
     using AVLTree<K, D, C>::_root;
     using AVLTree<K, D, C>::_compare;
+    using AVLTree<K, D, C>::_itemCount;
 };
 
+
 template<class K, class D, class C>
-size_t SolderAVLTree<K, D, C>::insert(const K &) {
-    return 0;
+typename SolderAVLTree<K, D, C>::Node *
+SolderAVLTree<K, D, C>::insertWithPositionAUX(const K &key, const D &data, Node *node, size_t &position) {
+    if (!node) {
+        _itemCount++;
+        return new Node(key, data);
+    }
+    auto compResult = _compare(key, node->key);
+    switch (compResult) {
+        case C::LESS:
+            node->left = insertWithPositionAUX(key, data, node->left, position);
+            break;
+        case C::EQUAL:
+            break;
+        case C::MORE:
+            position += elementCountWithoutRightTree(node);
+            node->right = insertWithPositionAUX(key, data, node->right, position);
+            break;
+    }
+    return balance(node);
 }
 
+template<class K, class D, class C>
+size_t SolderAVLTree<K, D, C>::insertAndGetPos(const K &key, const D &data) {
+    size_t pos = 0;
+    _root = insertWithPositionAUX(key, data, _root, pos);
+    return _itemCount - pos - 1;
+}
 
-size_t getRandom(size_t max) {
-    static std::mt19937 gen(22);
-    std::uniform_int_distribution<size_t> distribution(0, max);
-    return distribution(gen);
+template<class K, class D, class C>
+SolderAVLTree<K, D, C>::SolderAVLTree(const C &compare) : AVLTree<K, D, C>(compare) {
+}
+
+template<class K, class D, class C>
+void SolderAVLTree<K, D, C>::eraseAtPosition(size_t position) {
+    assert(position <= _itemCount);
+    position = _itemCount - position - 1;
+    _root = eraseAtPositionAUX(_root, position + 1);
+}
+
+template<class K, class D, class C>
+size_t SolderAVLTree<K, D, C>::elementCountWithoutRightTree(Node *node) {
+    if (!node->left) { return 1; }
+    return node->left->elementCount + 1;
+}
+
+template<class K, class D, class C>
+typename SolderAVLTree<K, D, C>::Node *
+SolderAVLTree<K, D, C>::eraseAtPositionAUX(Node *node, size_t reminder) {
+    if (!node) { return nullptr; }
+    auto currentNodePos = elementCountWithoutRightTree(node);
+    if (currentNodePos < reminder) {
+        reminder -= currentNodePos;
+        node->right = eraseAtPositionAUX(node->right, reminder);
+    } else if(currentNodePos > reminder) {
+        node->left = eraseAtPositionAUX(node->left, reminder);
+    } else {
+        return deleteAUX(node);
+    }
+    return balance(node);
 }
 
 void testAVLTree() {
+    std::vector<int> testData(TEST_DATA_SIZE);
+    std::iota(testData.begin(), testData.end(), 0);
+    std::shuffle(testData.begin(), testData.end(), std::mt19937(RANDOM_SEED));
+
     AVLTree<int, int> tree;
-    std::uniform_int_distribution<int> distribution(0, 100);
-    std::mt19937 gen(22);
-
-    for (int i = 0, key = 0; i < 20; ++i) {
-        key = distribution(gen);
-        tree.insert(key, i);
+    for (int &data : testData) {
+        tree.insert(data, data);
+    }
+    for (size_t i = 0; i < (testData.size() / 2); ++i) {
+        tree.insert(testData[i], testData[i]);
     }
 
-    gen.seed(22);
+    assert(tree.size() == testData.size() && "Дубликаты ключей не должны добавляться");
+    int prevKey = -1;
+    tree.traverseInOrder([&prevKey](auto key) {
+        if (prevKey != -1) { assert(prevKey < key && "Ключи должны быть упорядочены и уникальны"); }
+        prevKey = key;
+    });
+
     int *found = nullptr;
-    for (int i = 0, key = 0; i < 20; ++i) {
-        key = distribution(gen);
+    for (auto key : testData) {
         found = tree.find(key);
-        assert(*found == i);
+        assert(*found == key && "Не найден ключ");
         tree.erase(key);
-        assert(!tree.find(key));
+        assert(!tree.find(key) && "Ключ не удалился");
     }
-    assert(tree.isEmpty());
+    assert(tree.isEmpty() && "Должны были быть удалены все элементы");
+}
+
+void testSolderAVLTree() {
+    std::vector<int> testData(TEST_DATA_SIZE);
+    std::iota(testData.begin(), testData.end(), 0);
+    std::shuffle(testData.begin(), testData.end(), std::mt19937(RANDOM_SEED));
+
+    SolderAVLTree<int, int> tree;
+    size_t insertedPos = 0;
+    size_t traversePos = 0;
+    for (auto data : testData) {
+        insertedPos = tree.insertAndGetPos(data, data);
+        traversePos = 0;
+        tree.traverseInOrder([&](auto key) {
+            if (key == data) {
+                assert(traversePos == insertedPos && "Не правильный порядковый номер добавленного элемента");
+            }
+            traversePos++;
+        });
+    }
+
+    std::vector<int> remainKeys(testData.size());
+    std::iota(remainKeys.begin(), remainKeys.end(), 0);
+    std::mt19937 gen(RANDOM_SEED + 4);
+    int removedKey = -1;
+    size_t indexToRemove = 0;
+    /* Удаляем элемент по рандомному индексу и проверяем удалился ли он. */
+    for (int maxIndex = remainKeys.size() - 1; maxIndex >= 0; maxIndex--) {
+        std::uniform_int_distribution<size_t> distribution(0, maxIndex);
+        indexToRemove = distribution(gen);
+        removedKey = remainKeys[indexToRemove];
+        remainKeys.erase(remainKeys.begin() + indexToRemove);
+
+        tree.eraseAtPosition(indexToRemove);
+        tree.traverseInOrder([&](auto key) {
+            assert(key != removedKey && "Ключ должен был быть удален");
+        });
+    }
+    assert(tree.isEmpty() && "Дерево должно опустеть");
+}
+
+void testCase(std::istream &in, std::ostream &out) {
+    size_t commandCount = 0;
+    in >> commandCount;
+
+    SolderAVLTree<size_t, char> tree;
+    int command = 0;
+    size_t heightOrIndex = 0;
+    for (size_t i = 0; i < commandCount; ++i) {
+        in >> command >> heightOrIndex;
+        switch (command) {
+            case 1:
+                out <<tree.insertAndGetPos(heightOrIndex, 0) << std::endl;
+                break;
+            case 2:
+                tree.eraseAtPosition(heightOrIndex);
+                break;
+            default:
+                assert(false && "Не известная команда");
+        }
+    }
+}
+
+void test() {
+    {
+        std::stringstream in, out;
+        in << "5\n1 100\n1 200\n1 50\n2 1\n1 150";
+        testCase(in, out);
+        std::cout << "result:" << std::endl <<  out.str() << std::endl;
+        assert(out.str() == "0\n0\n2\n1\n");
+    }
+    {
+        std::stringstream in, out;
+        in << "8\n1 100\n1 200\n1 50\n2 1\n1 150\n1 400\n2 0\n1 300";
+        testCase(in, out);
+        std::cout << "result:" << std::endl <<  out.str() << std::endl;
+        assert(out.str() == "0\n0\n2\n1\n");
+    }
 }
 
 int main() {
-    testAVLTree();
+    /**
+     * testAVLTree();
+     * testSolderAVLTree();
+     * test();
+     * */
+    testCase(std::cin, std::cout);
     return 0;
 }
