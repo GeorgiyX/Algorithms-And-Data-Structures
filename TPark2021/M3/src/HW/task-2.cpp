@@ -33,14 +33,14 @@ struct IGraph {
 
 };
 
-class ListGraph : public IGraph{
+class DistanceListGraph : public IGraph{
 public:
 
-    explicit ListGraph(size_t verticesCount);
+    explicit DistanceListGraph(size_t verticesCount);
 
-    explicit ListGraph(const IGraph &rhs);
+    explicit DistanceListGraph(const IGraph &rhs);
 
-    ~ListGraph() override = default;
+    ~DistanceListGraph() override = default;
 
     void addEdge(size_t from, size_t to) override;
 
@@ -58,27 +58,27 @@ private:
 };
 
 
-ListGraph::ListGraph(size_t verticesCount) : _graph(verticesCount, std::vector<size_t>()),
-                                             _verticesCount(verticesCount) {
+DistanceListGraph::DistanceListGraph(size_t verticesCount) : _graph(verticesCount, std::vector<size_t>()),
+                                                             _verticesCount(verticesCount) {
 
 }
 
-void ListGraph::addEdge(size_t from, size_t to) {
+void DistanceListGraph::addEdge(size_t from, size_t to) {
     assert(from < _graph.size() && to < _graph.size());
     _graph[from].push_back(to);
     _graph[to].push_back(from);
 }
 
-size_t ListGraph::verticesCount() const {
+size_t DistanceListGraph::verticesCount() const {
     return _verticesCount;
 }
 
-std::vector<size_t> ListGraph::getNextVertices(size_t vertex) const {
+std::vector<size_t> DistanceListGraph::getNextVertices(size_t vertex) const {
     assert(vertex < _graph.size());
     return _graph[vertex];
 }
 
-std::vector<size_t> ListGraph::getPrevVertices(size_t vertex) const {
+std::vector<size_t> DistanceListGraph::getPrevVertices(size_t vertex) const {
     assert(vertex < _graph.size());
     std::vector<size_t> result;
     for (int parent = 0; parent < verticesCount(); parent++) {
@@ -89,14 +89,14 @@ std::vector<size_t> ListGraph::getPrevVertices(size_t vertex) const {
     return result;
 }
 
-ListGraph::ListGraph(const IGraph &rhs) : _graph(rhs.verticesCount(), std::vector<size_t>()),
-                                          _verticesCount(rhs.verticesCount()) {
+DistanceListGraph::DistanceListGraph(const IGraph &rhs) : _graph(rhs.verticesCount(), std::vector<size_t>()),
+                                                          _verticesCount(rhs.verticesCount()) {
     for (int i = 0; i < rhs.verticesCount(); ++i) {
         _graph[i] = rhs.getNextVertices(i);
     }
 }
 
-size_t ListGraph::getShortestPathCount(size_t from, size_t to) const {
+size_t DistanceListGraph::getShortestPathCount(size_t from, size_t to) const {
     std::vector<size_t> distance(verticesCount(), std::numeric_limits<size_t>::max());
     std::vector<size_t> pathCount(verticesCount(), 0);
     std::queue<size_t> queue;
@@ -125,7 +125,7 @@ void testCase(std::istream &in, std::ostream &out) {
     size_t vertexCount = 0, edgesCount = 0;
     size_t from = 0, to = 0;
     in >> vertexCount >> edgesCount;
-    ListGraph graph(vertexCount);
+    DistanceListGraph graph(vertexCount);
     for (size_t i = 0; i < edgesCount; ++i) {
         in >> from >> to;
         graph.addEdge(from, to);
